@@ -19,6 +19,12 @@ import cv2
 import streamlit as st
 
 from camera_stream import CameraStream
+from face_detection import (
+    detect_faces,
+    draw_faces,
+    get_face_detection_error,
+    is_face_detection_available,
+)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Page config  (must be first Streamlit call)
@@ -102,7 +108,7 @@ with st.sidebar:
 # Main area — header
 # ──────────────────────────────────────────────────────────────────────────────
 st.title("🎥 Real-Time Face Recognition Surveillance System")
-st.markdown("**Week 2 Deliverable** — Live camera feed inside Streamlit")
+st.markdown("**Week 3 Deliverable** - Live camera feed with face detection")
 st.markdown("---")
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -122,12 +128,18 @@ if not st.session_state.streaming:
 
 else:
     cam: CameraStream = st.session_state.cam
+    detection_available = is_face_detection_available()
+    detection_error = get_face_detection_error()
+
+    if not detection_available and detection_error:
+        st.warning(detection_error)
 
     # Stats row
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     fps_placeholder = col1.empty()
     res_placeholder = col2.empty()
-    status_placeholder = col3.empty()
+    faces_placeholder = col3.empty()
+    status_placeholder = col4.empty()
 
     # Live video placeholder
     video_placeholder = st.empty()
@@ -146,10 +158,17 @@ else:
 
         frame_count += 1
 
+        if detection_available:
+            face_locations = detect_faces(frame)
+            frame = draw_faces(frame, face_locations)
+        else:
+            face_locations = []
+
         # Overlay FPS + resolution on the frame
         w, h  = cam.get_resolution()
         fps   = cam.get_fps()
-        label = f"FPS: {fps}  |  {w}x{h}  |  Frame: {frame_count}"
+        face_count = len(face_locations)
+        label = f"Faces: {face_count}  |  FPS: {fps}  |  {w}x{h}  |  Frame: {frame_count}"
         cv2.putText(
             frame, label, (10, 30),
             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2,
@@ -165,6 +184,7 @@ else:
         if frame_count % 15 == 0:
             fps_placeholder.metric("FPS", fps)
             res_placeholder.metric("Resolution", f"{w} × {h}")
+            faces_placeholder.metric("Faces", face_count)
             elapsed = int(time.time() - stream_start)
             status_placeholder.metric("Uptime", f"{elapsed}s")
 
