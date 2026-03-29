@@ -148,6 +148,18 @@ def save_encoding_to_db(name: str, encoding: np.ndarray, db_path: str | Path = D
     return True
 
 
+def load_known_faces(db: "KnownFaceDB") -> tuple[list[str], list[np.ndarray]]:
+    """Return known names and encodings from DB helper rows for live matching."""
+    names: list[str] = []
+    encodings: list[np.ndarray] = []
+
+    for row in db.get_all_faces():
+        names.append(row["name"])
+        encodings.append(np.array(row["encoding"], dtype=ENCODING_DTYPE))
+
+    return names, encodings
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # KnownFaceDB — persistent store of named encodings
 # ──────────────────────────────────────────────────────────────────────────────
@@ -333,6 +345,33 @@ class KnownFaceDB:
         except sqlite3.Error as exc:
             print(f"[KnownFaceDB] Error reading records: {exc}")
             return []
+
+    def get_all_faces(self) -> list[dict[str, object]]:
+        """Return face rows as dictionaries: {id, name, encoding}."""
+        try:
+            with self._connect() as conn:
+                rows = conn.execute(
+                    "SELECT id, name, encoding, encoding_json FROM known_faces ORDER BY id ASC"
+                ).fetchall()
+        except sqlite3.Error as exc:
+            print(f"[KnownFaceDB] Error reading faces: {exc}")
+            return []
+
+        out: list[dict[str, object]] = []
+        for row_id, name, enc_blob, enc_json in rows:
+            encoding = self._blob_to_encoding(enc_blob) if enc_blob is not None else None
+            if encoding is None and enc_json:
+                try:
+                    legacy = json.loads(enc_json)
+                except json.JSONDecodeError:
+                    legacy = None
+                if isinstance(legacy, list):
+                    encoding = legacy
+            if encoding is None:
+                continue
+            out.append({"id": row_id, "name": name, "encoding": encoding})
+
+        return out
 
     # ── Add faces ──────────────────────────────────────────────────────────────
 

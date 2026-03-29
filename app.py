@@ -13,9 +13,10 @@ from face_encoding import (
     KnownFaceDB,
     encode_face_from_image,
     is_encoding_available,
+    load_known_faces,
     save_encoding_to_db,
 )
-from face_matching import RecognitionStats, draw_recognition_results, recognise_frame
+from face_matching import MatchResult, RecognitionStats, draw_recognition_results, recognise_frame
 
 
 logging.basicConfig(
@@ -54,6 +55,10 @@ DEFAULTS = {
     "capture_name": "",
     "last_snap": None,
     "last_logged_seen": {},
+    "last_results": [],
+    "week7_process_every_n": 2,
+    "week7_resize_scale": 0.5,
+    "week7_confidence_threshold": 0.60,
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
@@ -118,6 +123,32 @@ with st.sidebar:
         step=0.01,
         key="match_tolerance",
         help="Lower value is stricter. 0.50 is a practical default.",
+    )
+
+    st.session_state.week7_confidence_threshold = st.slider(
+        "Week 7 confidence threshold",
+        min_value=0.50,
+        max_value=0.80,
+        value=float(st.session_state.week7_confidence_threshold),
+        step=0.01,
+        key="week7_conf_threshold",
+        help="Higher value reduces wrong matches but may increase Unknown labels.",
+    )
+
+    st.session_state.week7_process_every_n = st.selectbox(
+        "Week 7 frame skip",
+        options=[1, 2, 3],
+        index=[1, 2, 3].index(int(st.session_state.week7_process_every_n)),
+        key="week7_frame_skip",
+        help="Process every Nth frame for faster live recognition.",
+    )
+
+    st.session_state.week7_resize_scale = st.selectbox(
+        "Week 7 resize scale",
+        options=[0.4, 0.5, 0.6, 0.75],
+        index=[0.4, 0.5, 0.6, 0.75].index(float(st.session_state.week7_resize_scale)),
+        key="week7_resize_scale_select",
+        help="Smaller scale improves speed; larger scale improves detail.",
     )
 
     st.markdown("---")
@@ -239,7 +270,7 @@ with st.sidebar:
             st.caption("No records in SQLite table yet.")
 
 st.title("Real-Time Face Recognition Surveillance System")
-st.markdown("Week 1-6 flow: camera/upload -> detection -> encoding -> SQLite match")
+st.markdown("Week 1-7 flow: camera/upload -> detection -> encoding -> live SQLite matching")
 st.markdown("---")
 
 if not st.session_state.streaming:
@@ -270,6 +301,9 @@ else:
     frame_count = 0
     stream_start = time.time()
 
+    known_names, known_encodings = load_known_faces(st.session_state.db)
+    st.caption(f"Week 7 loaded known faces: {len(known_names)}")
+
     while st.session_state.streaming:
         frame = cam.read()
         if frame is None:
@@ -279,6 +313,7 @@ else:
         frame_count += 1
         face_count = 0
         known_count = 0
+        results_for_frame: list[MatchResult] = st.session_state.last_results
 
         if encoding_available:
             if st.session_state.capture_pending:
@@ -287,35 +322,54 @@ else:
                 st.session_state.last_snap = snap
                 if ok:
                     log_event("face_registered_webcam", f"name={st.session_state.capture_name}")
+                    known_names, known_encodings = load_known_faces(st.session_state.db)
                 else:
                     log_event("face_register_webcam_failed", f"name={st.session_state.capture_name}")
                 st.session_state.capture_pending = False
                 st.session_state.capture_name = ""
                 st.rerun()
 
-            results = recognise_frame(
-                frame,
-                st.session_state.db,
-                tolerance=st.session_state.tolerance,
-                resize_scale=0.75,
-            )
-            frame = draw_recognition_results(frame, results, show_confidence=True)
-            face_count = len(results)
-            known_count = sum(r.is_known for r in results)
-            st.session_state.stats.update(results)
-            logging.info(f"Detected {face_count} faces")
+            should_process = frame_count % int(st.session_state.week7_process_every_n) == 0
 
-            now_ts = time.time()
-            seen_cache: dict[str, float] = st.session_state.last_logged_seen
-            for r in results:
-                if not r.is_known:
-                    continue
-                prev = seen_cache.get(r.name, 0.0)
-                if now_ts - prev >= 10.0:
-                    log_event("known_face_detected", f"name={r.name}, confidence={r.confidence:.3f}")
-                    seen_cache[r.name] = now_ts
-            if face_count > 0 and known_count == 0 and frame_count % 60 == 0:
-                log_event("unknown_face_detected", f"count={face_count}")
+            if should_process:
+                results = recognise_frame(
+                    frame,
+                    st.session_state.db,
+                    tolerance=st.session_state.tolerance,
+                    resize_scale=float(st.session_state.week7_resize_scale),
+                )
+
+                filtered_results: list[MatchResult] = []
+                for r in results:
+                    if r.is_known and r.confidence < float(st.session_state.week7_confidence_threshold):
+                        filtered_results.append(
+                            MatchResult(name="Unknown", confidence=r.confidence, location=r.location)
+                        )
+                    else:
+                        filtered_results.append(r)
+
+                st.session_state.last_results = filtered_results
+                results_for_frame = filtered_results
+                st.session_state.stats.update(filtered_results)
+                logging.info(f"Detected {len(filtered_results)} faces")
+
+                now_ts = time.time()
+                seen_cache: dict[str, float] = st.session_state.last_logged_seen
+                for r in filtered_results:
+                    if not r.is_known:
+                        continue
+                    prev = seen_cache.get(r.name, 0.0)
+                    if now_ts - prev >= 10.0:
+                        log_event("known_face_detected", f"name={r.name}, confidence={r.confidence:.3f}")
+                        seen_cache[r.name] = now_ts
+
+                unknown_count = sum(not r.is_known for r in filtered_results)
+                if unknown_count > 0:
+                    log_event("unknown_face_detected", f"count={unknown_count}")
+
+            frame = draw_recognition_results(frame, results_for_frame, show_confidence=True)
+            face_count = len(results_for_frame)
+            known_count = sum(r.is_known for r in results_for_frame)
 
         w, h = cam.get_resolution()
         fps = cam.get_fps()
