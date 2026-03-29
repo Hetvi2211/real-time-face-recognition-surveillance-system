@@ -78,6 +78,76 @@ def generate_encoding_from_path(image_path: str | Path) -> Optional[list[float]]
     return generate_encoding(img)
 
 
+def encode_face_from_image(image_bgr: np.ndarray) -> Optional[np.ndarray]:
+    """
+    Return a single face encoding from an uploaded image.
+
+    Rules for Week 6 quality gate:
+    - Exactly one face must be present.
+    - Image must not be too blurry.
+    """
+    if face_recognition is None:
+        raise RuntimeError("face_recognition is not installed.")
+
+    if image_bgr is None or image_bgr.size == 0:
+        return None
+
+    gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+    blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+    if blur_score < 40.0:
+        return None
+
+    rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+    face_locations = face_recognition.face_locations(rgb, model="hog")
+
+    if len(face_locations) != 1:
+        return None
+
+    encodings = face_recognition.face_encodings(rgb, known_face_locations=face_locations)
+    if not encodings:
+        return None
+
+    return encodings[0]
+
+
+def save_encoding_to_db(name: str, encoding: np.ndarray, db_path: str | Path = DEFAULT_DB_PATH) -> bool:
+    """Insert one encoding row directly into SQLite for Week 6 image uploads."""
+    if encoding is None:
+        return False
+
+    name = name.strip()
+    if not name:
+        return False
+
+    path = Path(db_path)
+    encoding_array = np.asarray(encoding, dtype=ENCODING_DTYPE)
+    encoding_blob = encoding_array.tobytes()
+    encoding_json = json.dumps(encoding_array.tolist())
+
+    try:
+        with sqlite3.connect(path) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS known_faces (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    encoding BLOB,
+                    encoding_json TEXT,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            conn.execute(
+                "INSERT INTO known_faces(name, encoding_json, encoding) VALUES (?, ?, ?)",
+                (name, encoding_json, encoding_blob),
+            )
+            conn.commit()
+    except sqlite3.Error:
+        return False
+
+    return True
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # KnownFaceDB — persistent store of named encodings
 # ──────────────────────────────────────────────────────────────────────────────
@@ -198,6 +268,10 @@ class KnownFaceDB:
             self._migrate_legacy_json(LEGACY_JSON_PATH)
 
         print(f"[KnownFaceDB] Loaded {self.count()} encoding(s) from {self.db_path}")
+
+    def reload(self) -> None:
+        """Reload in-memory data from SQLite."""
+        self._load()
 
     def _migrate_legacy_json(self, legacy_path: Path) -> None:
         """One-time migration from known_faces.json to known_faces.db."""

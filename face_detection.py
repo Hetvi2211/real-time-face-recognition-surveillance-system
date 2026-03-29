@@ -1,3 +1,8 @@
+"""
+face_detection.py
+Week 3 - Face Detection Module
+Detect faces and draw bounding boxes.
+"""
 import cv2
 
 try:

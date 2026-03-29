@@ -119,6 +119,7 @@ Recognition Result
 
 ---
 
+<<<<<<< HEAD
 # Current Implementation (Weeks 1-5)
 
 The project currently includes:
@@ -140,6 +141,8 @@ Evidence/reporting package is included under:
 
 ---
 
+=======
+>>>>>>> fec7549fe0da8f462813dbab6cca18206dcb620d
 # Team Responsibilities
 
 ### DHARA

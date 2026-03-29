@@ -1,14 +1,20 @@
-import time
+import logging
 import pathlib
 import tempfile
-import logging
+import time
 from datetime import datetime
 
 import cv2
+import numpy as np
 import streamlit as st
 
 from camera_stream import CameraStream
-from face_encoding import KnownFaceDB, is_encoding_available
+from face_encoding import (
+    KnownFaceDB,
+    encode_face_from_image,
+    is_encoding_available,
+    save_encoding_to_db,
+)
 from face_matching import RecognitionStats, draw_recognition_results, recognise_frame
 
 
@@ -18,12 +24,11 @@ logging.basicConfig(
     format="%(asctime)s - %(message)s",
 )
 
-
 EVIDENCE_LOG_PATH = pathlib.Path("evidence/runtime_logs/app_events.log")
 
 
 def log_event(event: str, details: str = "") -> None:
-    """Append timestamped runtime events for weekly evidence logs."""
+    """Append timestamped runtime events for evidence and debugging."""
     EVIDENCE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{timestamp}] {event}"
@@ -32,9 +37,10 @@ def log_event(event: str, details: str = "") -> None:
     with EVIDENCE_LOG_PATH.open("a", encoding="utf-8") as f:
         f.write(line + "\n")
 
+
 st.set_page_config(
     page_title="Face Recognition Surveillance",
-    page_icon="🎥",
+    page_icon="CAM",
     layout="wide",
 )
 
@@ -77,46 +83,54 @@ def stop_camera() -> None:
         logging.info("Camera stopped")
         log_event("camera_stopped")
 
+
 with st.sidebar:
-    st.image("https://img.icons8.com/emoji/96/video-camera-emoji.png", width=80)
     st.title("Controls")
     st.markdown("---")
 
-    st.subheader("📷 Camera")
-    cam_index = st.selectbox("Camera Index", options=[0, 1, 2], index=0)
-    resolution = st.selectbox("Resolution",
-                              options=["640 × 480", "1280 × 720", "1920 × 1080"], index=0)
-    res_w, res_h = map(int, resolution.replace(" ", "").split("×"))
+    st.subheader("Camera")
+    cam_index = st.selectbox("Camera Index", options=[0, 1, 2], index=0, key="camera_index")
+    resolution = st.selectbox(
+        "Resolution",
+        options=["640 x 480", "1280 x 720", "1920 x 1080"],
+        index=0,
+        key="camera_resolution",
+    )
+    res_w, res_h = map(int, resolution.replace(" ", "").split("x"))
 
     if not st.session_state.streaming:
-        if st.button("▶  Start Camera", use_container_width=True, type="primary"):
+        if st.button("Start Camera", use_container_width=True, type="primary", key="start_camera_btn"):
             start_camera(cam_index, res_w, res_h)
             st.rerun()
     else:
-        if st.button("⏹  Stop Camera", use_container_width=True, type="secondary"):
+        if st.button("Stop Camera", use_container_width=True, type="secondary", key="stop_camera_btn"):
             stop_camera()
             st.rerun()
 
     st.markdown("---")
 
-    st.subheader("🔎 Recognition")
+    st.subheader("Recognition")
     st.session_state.tolerance = st.slider(
         "Match tolerance",
-        min_value=0.35, max_value=0.65,
-        value=float(st.session_state.tolerance), step=0.01,
-        help="Lower = stricter. 0.50 recommended."
+        min_value=0.35,
+        max_value=0.65,
+        value=float(st.session_state.tolerance),
+        step=0.01,
+        key="match_tolerance",
+        help="Lower value is stricter. 0.50 is a practical default.",
     )
 
     st.markdown("---")
 
     if is_encoding_available():
-        st.subheader("➕ Register Face")
-        st.caption("Upload a clear photo and name, or capture from webcam.")
-
-        uploaded = st.file_uploader("Upload photo", type=["jpg", "jpeg", "png"],
-                                    label_visibility="collapsed")
-        name_upload = st.text_input("Name (upload)", placeholder="e.g. Alice")
-        if st.button("Add from photo", use_container_width=True):
+        st.subheader("Register Face")
+        uploaded = st.file_uploader(
+            "Upload photo",
+            type=["jpg", "jpeg", "png"],
+            key="upload_face_photo",
+        )
+        name_upload = st.text_input("Name (upload)", placeholder="e.g. Alice", key="name_upload")
+        if st.button("Add from photo", use_container_width=True, key="add_photo_btn"):
             if not name_upload.strip():
                 st.warning("Enter a name first.")
             elif uploaded is None:
@@ -131,13 +145,61 @@ with st.sidebar:
                     log_event("face_registered_photo", f"name={name_upload.strip()}")
                 else:
                     log_event("face_register_photo_failed", f"name={name_upload.strip()}")
-                st.success(f"✅ Added '{name_upload.strip()}'") if ok else st.error("No face found in photo.")
+                st.success(f"Added '{name_upload.strip()}'") if ok else st.error("No face found in photo.")
+
+        st.markdown("---")
+        st.subheader("Week 6: Image Upload Module")
+        uploaded_w6 = st.file_uploader(
+            "Upload Face Image (Week 6)",
+            type=["jpg", "jpeg", "png"],
+            key="upload_face_photo_week6",
+        )
+        name_w6 = st.text_input("Enter Name (Week 6)", key="name_upload_week6")
+
+        if uploaded_w6 is not None:
+            file_bytes = np.asarray(bytearray(uploaded_w6.read()), dtype=np.uint8)
+            uploaded_w6.seek(0)
+            image_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+            if image_bgr is not None:
+                st.image(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB), caption="Uploaded Image", use_container_width=True)
+
+        if st.button("Register Uploaded Person", use_container_width=True, key="register_uploaded_week6"):
+            if uploaded_w6 is None:
+                st.warning("Upload an image first.")
+            elif not name_w6.strip():
+                st.warning("Enter a name first.")
+            else:
+                file_bytes = np.asarray(bytearray(uploaded_w6.read()), dtype=np.uint8)
+                uploaded_w6.seek(0)
+                image_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+                if image_bgr is None:
+                    st.error("Invalid image file. Please upload a clear JPG/PNG.")
+                else:
+                    encoding = encode_face_from_image(image_bgr)
+                    if encoding is None:
+                        st.warning("Ensure image quality is good and only one clear face is visible.")
+                        st.write("- Only ONE face in image")
+                        st.write("- Face is clear and well-lit")
+                        st.write("- Image is not blurry")
+                        log_event("face_register_upload_failed", f"name={name_w6.strip()}")
+                    else:
+                        ok = save_encoding_to_db(name_w6.strip(), encoding, st.session_state.db.db_path)
+                        if ok:
+                            st.session_state.db.reload()
+                            log_event("face_registered_upload", f"name={name_w6.strip()}")
+                            st.success(f"{name_w6.strip()} registered successfully from uploaded image.")
+                        else:
+                            st.error("Failed to store uploaded face in database.")
 
         st.markdown("---")
 
-        name_live = st.text_input("Name (webcam)", placeholder="e.g. Bob")
-        if st.button("📸 Capture from webcam", use_container_width=True,
-                     disabled=not st.session_state.streaming):
+        name_live = st.text_input("Name (webcam)", placeholder="e.g. Bob", key="name_webcam")
+        if st.button(
+            "Capture from webcam",
+            use_container_width=True,
+            disabled=not st.session_state.streaming,
+            key="capture_webcam_btn",
+        ):
             if not name_live.strip():
                 st.warning("Enter a name first.")
             else:
@@ -146,25 +208,29 @@ with st.sidebar:
                 log_event("face_capture_requested", f"name={name_live.strip()}")
 
         if st.session_state.last_snap is not None:
-            st.image(cv2.cvtColor(st.session_state.last_snap, cv2.COLOR_BGR2RGB),
-                     caption="Last captured frame", use_container_width=True)
+            st.image(
+                cv2.cvtColor(st.session_state.last_snap, cv2.COLOR_BGR2RGB),
+                caption="Last captured frame",
+                use_container_width=True,
+            )
 
         st.markdown("---")
 
-        st.subheader("🗂 Known Faces")
+        st.subheader("Known Faces")
         names = st.session_state.db.get_names()
         if names:
             for n in names:
                 c1, c2 = st.columns([3, 1])
-                c1.write(f"👤 {n}")
-                if c2.button("✕", key=f"rm_{n}"):
+                c1.write(f"{n}")
+                if c2.button("Remove", key=f"rm_{n}"):
                     st.session_state.db.remove_face(n)
+                    log_event("face_removed", f"name={n}")
                     st.rerun()
         else:
             st.caption("No faces registered yet.")
 
         st.markdown("---")
-        st.subheader("📊 Database Records")
+        st.subheader("Database Records")
         records = st.session_state.db.get_all_records()
         if records:
             for r in records:
@@ -172,18 +238,15 @@ with st.sidebar:
         else:
             st.caption("No records in SQLite table yet.")
 
-    st.markdown("---")
-    st.caption("Real-Time Face Recognition System")
-
-st.title("🎥 Real-Time Face Recognition Surveillance System")
-st.markdown("Register known people and identify them in real time.")
+st.title("Real-Time Face Recognition Surveillance System")
+st.markdown("Week 1-6 flow: camera/upload -> detection -> encoding -> SQLite match")
 st.markdown("---")
 
 if not st.session_state.streaming:
-    st.info("Camera is stopped. Click **▶ Start Camera** in the sidebar to begin.")
+    st.info("Camera is stopped. Click Start Camera in the sidebar.")
     c1, c2, c3 = st.columns(3)
     c1.metric("Status", "Offline")
-    c2.metric("FPS", "—")
+    c2.metric("FPS", "-")
     c3.metric("Known Faces", len(st.session_state.db.get_names()))
 else:
     cam: CameraStream = st.session_state.cam
@@ -196,10 +259,10 @@ else:
     fps_ph = c1.empty()
     res_ph = c2.empty()
     faces_ph = c3.empty()
-    known_ph  = c4.empty()
+    known_ph = c4.empty()
     uptime_ph = c5.empty()
 
-    st.markdown("##### 🏷 Recently Recognised")
+    st.markdown("#### Recently Recognized")
     last_seen_ph = st.empty()
 
     video_ph = st.empty()
@@ -220,8 +283,7 @@ else:
         if encoding_available:
             if st.session_state.capture_pending:
                 snap = frame.copy()
-                ok = st.session_state.db.add_face_from_frame(
-                    st.session_state.capture_name, snap)
+                ok = st.session_state.db.add_face_from_frame(st.session_state.capture_name, snap)
                 st.session_state.last_snap = snap
                 if ok:
                     log_event("face_registered_webcam", f"name={st.session_state.capture_name}")
@@ -257,24 +319,28 @@ else:
 
         w, h = cam.get_resolution()
         fps = cam.get_fps()
-        cv2.putText(frame,
-                    f"Faces: {face_count}  |  FPS: {fps}  |  {w}x{h}  |  Frame: {frame_count}",
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
+        cv2.putText(
+            frame,
+            f"Faces: {face_count} | FPS: {fps} | {w}x{h} | Frame: {frame_count}",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.65,
+            (0, 255, 0),
+            2,
+        )
 
-        video_ph.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
-                       channels="RGB", use_container_width=True)
+        video_ph.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), channels="RGB", use_container_width=True)
 
         if frame_count % 15 == 0:
             fps_ph.metric("FPS", fps)
-            res_ph.metric("Resolution", f"{w} × {h}")
+            res_ph.metric("Resolution", f"{w} x {h}")
             faces_ph.metric("Faces", face_count)
-            known_ph.metric("Recognised", known_count)
+            known_ph.metric("Recognized", known_count)
             uptime_ph.metric("Uptime", f"{int(time.time() - stream_start)}s")
 
             ls = st.session_state.stats.last_seen
             if ls:
-                last_seen_ph.markdown(
-                    "  |  ".join(f"**{n}** {t}" for n, t in ls.items()))
+                last_seen_ph.markdown(" | ".join(f"**{n}** {t}" for n, t in ls.items()))
             else:
                 last_seen_ph.caption("No known faces seen yet.")
 
