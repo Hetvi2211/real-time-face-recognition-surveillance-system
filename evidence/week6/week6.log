@@ -1,0 +1,5 @@
+Step 1: Open Streamlit app and use Week 6 upload module.
+Step 2: Upload clear single-face image with name -> expected success.
+Step 3: Upload blurred or multi-face image -> expected warning/failure.
+Step 4: Verify DB rows with SQL query.
+Step 5: Verify runtime log contains face_registered_upload event.
