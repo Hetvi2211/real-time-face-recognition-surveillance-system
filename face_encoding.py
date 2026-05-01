@@ -14,17 +14,10 @@ except ImportError:
     face_recognition = None
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Constants
-# ──────────────────────────────────────────────────────────────────────────────
 DEFAULT_DB_PATH = Path("known_faces.db")
 LEGACY_JSON_PATH = Path("known_faces.json")
 ENCODING_DTYPE = np.float64
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Low-level helpers
-# ──────────────────────────────────────────────────────────────────────────────
 
 def is_encoding_available() -> bool:
     """Return True when face_recognition is installed."""
@@ -56,14 +49,14 @@ def generate_encoding(frame_bgr: np.ndarray, location: Optional[tuple] = None) -
     locations = [location] if location is not None else face_recognition.face_locations(rgb, model="hog")
 
     if not locations:
-        return None  # no face found
+        return None
 
     encodings = face_recognition.face_encodings(rgb, known_face_locations=locations)
 
     if not encodings:
         return None
 
-    return encodings[0].tolist()   # numpy array → plain Python list (JSON-serialisable)
+    return encodings[0].tolist()
 
 
 def generate_encoding_from_path(image_path: str | Path) -> Optional[list[float]]:
@@ -159,11 +152,6 @@ def load_known_faces(db: "KnownFaceDB") -> tuple[list[str], list[np.ndarray]]:
 
     return names, encodings
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# KnownFaceDB — persistent store of named encodings
-# ──────────────────────────────────────────────────────────────────────────────
-
 class KnownFaceDB:
     """
     In-memory + SQLite-backed store of known face encodings.
@@ -181,12 +169,9 @@ class KnownFaceDB:
 
     def __init__(self, db_path: str | Path = DEFAULT_DB_PATH):
         self.db_path: Path = Path(db_path)
-        # { name: [encoding_list, ...] }
         self._data: dict[str, list[list[float]]] = {}
         self._ensure_schema()
         self._load()
-
-    # ── Persistence ────────────────────────────────────────────────────────────
 
     def _connect(self) -> sqlite3.Connection:
         """Return a sqlite connection with dict-like row access disabled for speed."""
@@ -217,7 +202,6 @@ class KnownFaceDB:
                 if "encoding" not in cols:
                     conn.execute("ALTER TABLE known_faces ADD COLUMN encoding BLOB")
 
-                # Migrate older rows that only have JSON text encodings to BLOB.
                 rows = conn.execute(
                     "SELECT id, encoding_json FROM known_faces WHERE encoding IS NULL AND encoding_json IS NOT NULL"
                 ).fetchall()
@@ -372,9 +356,6 @@ class KnownFaceDB:
             out.append({"id": row_id, "name": name, "encoding": encoding})
 
         return out
-
-    # ── Add faces ──────────────────────────────────────────────────────────────
-
     def add_face_from_frame(
         self,
         name: str,
@@ -422,8 +403,6 @@ class KnownFaceDB:
             self.save()
         return True
 
-    # ── Remove / clear ─────────────────────────────────────────────────────────
-
     def remove_face(self, name: str, auto_save: bool = True) -> bool:
         """Remove all encodings for *name*. Returns True if name existed."""
         if name in self._data:
@@ -439,8 +418,6 @@ class KnownFaceDB:
         self._data.clear()
         if auto_save:
             self.save()
-
-    # ── Query ──────────────────────────────────────────────────────────────────
 
     def get_all(self) -> tuple[list[np.ndarray], list[str]]:
         """
@@ -477,9 +454,6 @@ class KnownFaceDB:
         return f"KnownFaceDB(path={self.db_path!r}, names={self.get_names()})"
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Quick standalone demo  (python face_encoding.py)
-# ──────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     if not is_encoding_available():
         print("face_recognition is not installed — cannot run demo.")

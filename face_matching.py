@@ -15,25 +15,17 @@ except ImportError:
 from face_encoding import KnownFaceDB, generate_encoding
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Data classes
-# ──────────────────────────────────────────────────────────────────────────────
-
 @dataclass
 class MatchResult:
     """Holds recognition data for one detected face."""
-    name: str                          # "Alice" or "Unknown"
-    confidence: float                  # 0.0–1.0 (1 = perfect match)
-    location: tuple[int, int, int, int]  # (top, right, bottom, left)
+    name: str
+    confidence: float
+    location: tuple[int, int, int, int]
     is_known: bool = field(init=False)
 
     def __post_init__(self):
         self.is_known = self.name != "Unknown"
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Core matching logic
-# ──────────────────────────────────────────────────────────────────────────────
 
 def match_encoding(
     unknown_encoding: np.ndarray,
@@ -65,24 +57,20 @@ def match_encoding(
     if not known_encodings:
         return "Unknown", 0.0
 
-    # face_recognition returns a boolean array (True = within tolerance)
     matches = face_recognition.compare_faces(known_encodings, unknown_encoding, tolerance=tolerance)
     distances = face_recognition.face_distance(known_encodings, unknown_encoding)
 
     if not any(matches):
-        # No match within tolerance — return closest distance for UI feedback
         best_dist = float(np.min(distances))
         confidence = max(0.0, round(1.0 - best_dist, 3))
         return "Unknown", confidence
 
-    # Collect only matched candidates
     candidate_votes: dict[str, list[float]] = {}
     for i, (matched, dist) in enumerate(zip(matches, distances)):
         if matched:
             name = known_names[i]
             candidate_votes.setdefault(name, []).append(dist)
 
-    # Pick winner: most votes → then best average distance as tiebreaker
     winner = max(
         candidate_votes,
         key=lambda n: (len(candidate_votes[n]), -sum(candidate_votes[n]) / len(candidate_votes[n])),
@@ -92,10 +80,6 @@ def match_encoding(
 
     return winner, confidence
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# High-level frame recognition
-# ──────────────────────────────────────────────────────────────────────────────
 
 def recognise_frame(
     frame_bgr: np.ndarray,
@@ -133,7 +117,6 @@ def recognise_frame(
 
     rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
 
-    # Downscale for faster detection, then fall back to full resolution when needed.
     if resize_scale == 1.0:
         small_rgb = rgb
     else:
@@ -141,7 +124,6 @@ def recognise_frame(
 
     small_locations = face_recognition.face_locations(small_rgb, model=model)
 
-    # Fallback improves detection in difficult lighting where downscaled frames miss faces.
     if not small_locations and resize_scale != 1.0:
         small_rgb = rgb
         resize_scale = 1.0
@@ -150,7 +132,6 @@ def recognise_frame(
     if not small_locations:
         return []
 
-    # Scale locations back to original size
     inv = 1.0 / resize_scale
     h, w = frame_bgr.shape[:2]
     orig_locations = [
@@ -163,7 +144,6 @@ def recognise_frame(
         for t, r, b, l in small_locations
     ]
 
-    # Compute encodings at original resolution for accuracy
     encodings = face_recognition.face_encodings(rgb, known_face_locations=orig_locations)
 
     known_encodings, known_names = db.get_all()
@@ -175,10 +155,6 @@ def recognise_frame(
 
     return results
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Frame annotation
-# ──────────────────────────────────────────────────────────────────────────────
 
 def draw_recognition_results(
     frame: np.ndarray,
@@ -193,12 +169,10 @@ def draw_recognition_results(
     """
     for r in results:
         top, right, bottom, left = r.location
-        color = (0, 200, 0) if r.is_known else (0, 0, 220)   # green : red (BGR)
+        color = (0, 200, 0) if r.is_known else (0, 0, 220)
 
-        # Bounding box
         cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
 
-        # Label background pill
         label = r.name
         if show_confidence:
             label += f" ({int(r.confidence * 100)}%)"
@@ -217,16 +191,12 @@ def draw_recognition_results(
             (left + 2, bottom - 5),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.6,
-            (255, 255, 255),   # white text
+            (255, 255, 255),
             1,
         )
 
     return frame
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Recognition stats helper (used by Streamlit sidebar)
-# ──────────────────────────────────────────────────────────────────────────────
 
 class RecognitionStats:
     """Track rolling recognition metrics over the last N frames."""
@@ -234,7 +204,7 @@ class RecognitionStats:
     def __init__(self, window: int = 60):
         self._window = window
         self._history: list[dict] = []
-        self._last_seen: dict[str, float] = {}  # name → timestamp
+        self._last_seen: dict[str, float] = {}
 
     def update(self, results: list[MatchResult]) -> None:
         ts = time.time()
@@ -243,7 +213,6 @@ class RecognitionStats:
                 self._last_seen[r.name] = ts
 
         self._history.append({"ts": ts, "count": len(results), "known": sum(r.is_known for r in results)})
-        # Keep only last `_window` entries
         if len(self._history) > self._window:
             self._history.pop(0)
 

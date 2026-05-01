@@ -22,7 +22,6 @@ class CameraStream:
         self.width = width
         self.height = height
 
-        # Try to open the requested camera; fall back to index 1
         self.cap = cv2.VideoCapture(src)
         if not self.cap.isOpened():
             print(f"[CameraStream] Camera index {src} not found — trying index 1 …")
@@ -33,25 +32,20 @@ class CameraStream:
                     "Check that your webcam is connected and not used by another app."
                 )
 
-        # Apply requested resolution
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
-        # Grab actual values after hardware negotiation
         self.actual_width  = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # Read first frame synchronously so callers always have something to show
         ret, self.frame = self.cap.read()
         if not ret:
             raise RuntimeError("Camera opened but could not read the first frame.")
 
-        # Threading control
         self._lock    = threading.Lock()
         self._running = False
         self._thread  = None
 
-        # FPS tracking
         self._fps_start_time  = time.time()
         self._fps_frame_count = 0
         self.fps              = 0.0
@@ -60,10 +54,6 @@ class CameraStream:
             f"[CameraStream] Camera ready — "
             f"{self.actual_width}x{self.actual_height}"
         )
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
 
     def start(self) -> "CameraStream":
         """Start the background capture thread. Returns self for chaining."""
@@ -101,10 +91,6 @@ class CameraStream:
         self.cap.release()
         print("[CameraStream] Camera released.")
 
-    # ------------------------------------------------------------------
-    # Internal
-    # ------------------------------------------------------------------
-
     def _capture_loop(self) -> None:
         """Continuously grab frames in the background thread."""
         while self._running:
@@ -118,7 +104,6 @@ class CameraStream:
             with self._lock:
                 self.frame = frame
 
-            # FPS calculation (rolling over 30 frames)
             self._fps_frame_count += 1
             if self._fps_frame_count >= 30:
                 elapsed         = time.time() - self._fps_start_time
@@ -127,9 +112,6 @@ class CameraStream:
                 self._fps_start_time  = time.time()
 
 
-# ------------------------------------------------------------------
-# Quick standalone test  (python camera_stream.py)
-# ------------------------------------------------------------------
 if __name__ == "__main__":
     print("Testing CameraStream — press Q or ESC to quit.\n")
 
@@ -142,7 +124,6 @@ if __name__ == "__main__":
         if frame is None:
             continue
 
-        # Overlay FPS and resolution
         w, h = cam.get_resolution()
         cv2.putText(frame, f"FPS : {cam.get_fps()}",   (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)

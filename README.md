@@ -60,15 +60,36 @@ pip install -r requirements.txt
 python app.py
 ```
 
-## Demo Image
+<<<<<<< HEAD
+## Demo Images
 
-Below is a live demo of the system detecting and recognizing faces in real-time.  
-Known faces are highlighted in green with confidence scores, while unknown faces are marked in red.
+Add your screenshots in `evidence/screenshots/` and update the paths below.
 
-![Live Detection Demo](evidence/week7/screenshots/live-detection-demo.png)
+![Live Detection Demo](evidence/screenshots/live-detection-demo.png)
+![Known Person Recognition](evidence/screenshots/known-person-recognition.png)
+![Unknown Face Alert](evidence/screenshots/unknown-face-alert.png)
+
+## Future Improvements
+=======
+## Demo Images
+
+Add your screenshots in the `evidence/week*/screenshots/` folders and update the paths below.
+
+```markdown
+![Live Detection Demo](evidence/week5/screenshots/live-detection-demo.png)
+![Known Person Recognition](evidence/week6/screenshots/known-person-recognition.png)
+![Unknown Face Alert](evidence/week7/screenshots/unknown-face-alert.png)
+```
+
+Example section after adding real images:
+
+![Live Detection Demo](evidence/week5/screenshots/live-detection-demo.png)
+![Known Person Recognition](evidence/week6/screenshots/known-person-recognition.png)
+![Unknown Face Alert](evidence/week7/screenshots/unknown-face-alert.png)
 
 ## Future Improvements
 
+>>>>>>> ace8618 (Cleanup: remove unnecessary comments and polish UI)
 - Multi-camera support
 - Cloud sync for known faces
 - Alert channels (email/SMS)
