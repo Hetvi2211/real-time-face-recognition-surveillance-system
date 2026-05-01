@@ -39,6 +39,24 @@ def log_event(event: str, details: str = "") -> None:
         f.write(line + "\n")
 
 
+def show_detection_toasts(results: list[MatchResult]) -> None:
+    now_ts = time.time()
+    known_toasts: dict[str, float] = st.session_state.last_known_toasts
+
+    for result in results:
+        if not result.is_known:
+            continue
+        last_shown = known_toasts.get(result.name, 0.0)
+        if now_ts - last_shown >= 5.0:
+            st.toast(f"Known face: {result.name} ({int(result.confidence * 100)}%)", icon="✅")
+            known_toasts[result.name] = now_ts
+
+    unknown_count = sum(not result.is_known for result in results)
+    if unknown_count > 0 and now_ts - float(st.session_state.last_unknown_toast_at) >= 5.0:
+        st.toast(f"Unknown face(s) detected: {unknown_count}", icon="⚠️")
+        st.session_state.last_unknown_toast_at = now_ts
+
+
 st.set_page_config(
     page_title="Face Recognition Surveillance System",
     page_icon="🎥",
@@ -59,6 +77,8 @@ DEFAULTS = {
     "process_every_n": 2,
     "resize_scale": 0.5,
     "confidence_threshold": 0.60,
+    "last_known_toasts": {},
+    "last_unknown_toast_at": 0.0,
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
@@ -366,6 +386,8 @@ else:
                 unknown_count = sum(not r.is_known for r in filtered_results)
                 if unknown_count > 0:
                     log_event("unknown_face_detected", f"count={unknown_count}")
+
+                show_detection_toasts(filtered_results)
 
             frame = draw_recognition_results(frame, results_for_frame, show_confidence=True)
             face_count = len(results_for_frame)
