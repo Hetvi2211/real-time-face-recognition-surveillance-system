@@ -60,7 +60,8 @@ python app.py
 
 ## Demo Images
 
-Add your screenshots in `screenshots/` and update the paths below. Example placeholders are included.
+Below is a live demo of the system detecting and recognizing faces in real-time.  
+Known faces are highlighted in green with confidence scores, while unknown faces are marked in red.
 
 ![Live Detection Demo](screenshots/live-detection-demo.png)
 
