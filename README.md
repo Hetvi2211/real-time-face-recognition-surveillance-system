@@ -1,189 +1,85 @@
 # Real-Time Face Recognition Surveillance System
 
-## Project Overview
+## Project Explanation
 
-The **Real-Time Face Recognition Surveillance System** is an AI-based security application that detects and recognizes human faces from live video streams using computer vision techniques. The system captures video through a webcam or IP camera, detects faces, converts them into numerical encodings, and compares them with stored face data in a database.
+This project is a real-time surveillance application that detects and recognizes faces from a live camera stream. It uses computer vision to locate faces frame-by-frame, converts each face into numerical embeddings, and compares them against a registered set of known faces.
 
-If a match is found, the system displays the person's name and generates alerts. If no match is found, the person is marked as **Unknown** and logged for future analysis.
+If a match is found, the system displays the person's name. If no match is found, the face is labeled as Unknown. The project is designed for practical security monitoring use cases and demonstrates an end-to-end AI pipeline: video capture, detection, encoding, matching, and event logging.
 
-This project demonstrates practical implementation of **Computer Vision, Machine Learning, and Real-Time System Design**.
+## Features
 
----
+- Real-time camera stream processing
+- Face detection on each frame
+- Face encoding and matching against known faces
+- Registration and storage of known people
+- Unknown face labeling for unmatched identities
+- Adjustable matching tolerance for recognition sensitivity
+- Event logging for traceability and reporting
+- Modular Python files for easy maintenance and extension
 
-# Project Goal
+## Tech Stack
 
-To build an **automated real-time surveillance system** capable of identifying individuals using AI-based face recognition to enhance security.
+- Language: Python 3.x
+- Computer Vision: OpenCV
+- Face Recognition: face_recognition (dlib-based)
+- Numerical Computing: NumPy
+- App/UI Layer: Streamlit (project UI flow)
+- Data Storage: JSON/SQLite-based project storage
+- Version Control: Git and GitHub
 
----
+## Project Structure
 
-# Objectives
+- `app.py`: Main application entry point
+- `camera_stream.py`: Camera input and frame handling
+- `face_detection.py`: Face detection logic
+- `face_encoding.py`: Face encoding generation
+- `face_matching.py`: Matching logic for known vs unknown faces
+- `known_faces.json`: Registered known faces metadata
+- `test_camera.py`: Camera testing utility
+- `docs/`: Reports and project documentation
+- `evidence/`: Week-wise evidence, logs, and screenshots
 
-* Capture real-time video from a webcam or IP camera
-* Detect human faces using computer vision techniques
-* Generate facial encodings using AI models
-* Match detected faces with stored database
-* Display identity of recognized individuals
-* Generate alerts for detection events
-* Maintain logs of detected individuals
+## Setup and Run
 
----
+1. Clone the repository:
 
-# Features
-
-* Upload person image with name
-* Store face data in database
-* Start/Stop monitoring system
-* Real-time video capture
-* Face detection and recognition
-* Display recognized person's name
-* Show **Unknown** for unmatched faces
-* Alert notification system
-* Detection logs storage
-
----
-
-# System Architecture
-
-```
-Camera Input
-      │
-      ▼
-Face Detection (OpenCV)
-      │
-      ▼
-Face Encoding (face_recognition / dlib)
-      │
-      ▼
-Database Comparison (SQLite)
-      │
-      ▼
-Recognition Result
-   ┌───────────────┐
-   │ Known Person  │ → Display Name + Alert
-   │ Unknown Face  │ → Log Data
-   └───────────────┘
+```bash
+git clone https://github.com/Hetvi2211/real-time-face-recognition-surveillance-system.git
+cd real-time-face-recognition-surveillance-system
 ```
 
----
+2. Install dependencies:
 
-# Tech Stack
+```bash
+pip install -r requirements.txt
+```
 
-## Programming Language
+3. Run the project:
 
-* Python 3.8+
+```bash
+python app.py
+```
 
-## Libraries
+## Demo Images
 
-* OpenCV
-* face_recognition (dlib)
-* NumPy
-* Streamlit / Flask
+Add your screenshots in the `evidence/week*/screenshots/` folders and update the paths below.
 
-## Tools
+```markdown
+![Live Detection Demo](evidence/week5/screenshots/live-detection-demo.png)
+![Known Person Recognition](evidence/week6/screenshots/known-person-recognition.png)
+![Unknown Face Alert](evidence/week7/screenshots/unknown-face-alert.png)
+```
 
-* VS Code / PyCharm
-* Git & GitHub
+Example section after adding real images:
 
-## Database
+![Live Detection Demo](evidence/week5/screenshots/live-detection-demo.png)
+![Known Person Recognition](evidence/week6/screenshots/known-person-recognition.png)
+![Unknown Face Alert](evidence/week7/screenshots/unknown-face-alert.png)
 
-* SQLite
+## Future Improvements
 
----
-
-# Hardware Requirements
-
-* Laptop / PC (Minimum 8GB RAM)
-* Webcam or IP Camera
-* Intel i5 Processor or higher
-
----
-
-# Software Requirements
-
-* Python 3.8+
-* OpenCV
-* face_recognition
-* NumPy
-* Streamlit or Flask
-* SQLite
-
----
-
-# Learning Outcomes
-
-* Understanding **Computer Vision concepts**
-* Hands-on experience with **Face Recognition**
-* Designing **Real-time AI systems**
-* **Database integration** with Python
-* **Team collaboration using GitHub**
-
----
-
-<<<<<<< HEAD
-# Current Implementation (Weeks 1-5)
-
-The project currently includes:
-
-* Real-time webcam streaming in Streamlit
-* Face detection and live bounding boxes
-* Face encoding + matching logic with adjustable tolerance
-* **SQLite-backed runtime storage** for known faces (`known_faces.db`)
-* Face encodings stored in SQLite as BLOB bytes (with compatibility migration)
-* Auto-migration from legacy JSON store (`known_faces.json`) on first run
-* Streamlit sidebar view for raw SQLite records (ID + name)
-* Runtime event logging for evidence (`evidence/runtime_logs/app_events.log`)
-
-Evidence/reporting package is included under:
-
-* `evidence/` (week-wise proof folders)
-* `docs/problems_weeks1_4.md` (explicit problem-handling)
-* `docs/acceptance_report_weeks1_4.md` (final pass/fail template for weeks 1-5)
-
----
-
-=======
->>>>>>> fec7549fe0da8f462813dbab6cca18206dcb620d
-# Team Responsibilities
-
-### DHARA
-
-* Frontend Development (Streamlit / Flask UI)
-* Database design and integration
-* Alert notification system
-
-### HETVI
-
-* Face detection and recognition logic
-* OpenCV integration
-* Model optimization
-
----
-
-# Limitations of Existing Systems
-
-* High cost of commercial surveillance systems
-* Limited customization
-* Dependency on internet or cloud services
-* Privacy concerns
-
----
-
-# Innovation in This Project
-
-* Lightweight real-time face recognition
-* Fully **offline working system**
-* Custom database for known faces
-* Integrated alert system
-
----
-
-# Future Enhancements
-
-* Mobile application integration
-* Cloud database (Firebase / MySQL)
-* Multi-camera surveillance support
-* Face mask detection
-* Emotion detection
-* SMS / Email alert system
-
----
+- Multi-camera support
+- Cloud sync for known faces
+- Alert channels (email/SMS)
+- Performance optimization for low-power devices
+- Additional analytics and attendance reporting
