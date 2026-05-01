@@ -8,36 +8,36 @@ If a match is found, the system displays the person's name. If no match is found
 
 ## Features
 
-- Real-time camera stream processing
-- Face detection on each frame
-- Face encoding and matching against known faces
-- Registration and storage of known people
-- Unknown face labeling for unmatched identities
-- Adjustable matching tolerance for recognition sensitivity
-- Event logging for traceability and reporting
-- Modular Python files for easy maintenance and extension
+* Real-time camera stream processing
+* Face detection on each frame
+* Face encoding and matching against known faces
+* Registration and storage of known people
+* Unknown face labeling for unmatched identities
+* Adjustable matching tolerance for recognition sensitivity
+* Event logging for traceability and reporting
+* Modular Python files for easy maintenance and extension
 
 ## Tech Stack
 
-- Language: Python 3.x
-- Computer Vision: OpenCV
-- Face Recognition: face_recognition (dlib-based)
-- Numerical Computing: NumPy
-- App/UI Layer: Streamlit (project UI flow)
-- Data Storage: JSON/SQLite-based project storage
-- Version Control: Git and GitHub
+* Language: Python 3.x
+* Computer Vision: OpenCV
+* Face Recognition: face_recognition (dlib-based)
+* Numerical Computing: NumPy
+* App/UI Layer: Streamlit (project UI flow)
+* Data Storage: JSON/SQLite-based project storage
+* Version Control: Git and GitHub
 
 ## Project Structure
 
-- `app.py`: Main application entry point
-- `camera_stream.py`: Camera input and frame handling
-- `face_detection.py`: Face detection logic
-- `face_encoding.py`: Face encoding generation
-- `face_matching.py`: Matching logic for known vs unknown faces
-- `known_faces.json`: Registered known faces metadata
-- `test_camera.py`: Camera testing utility
-- `docs/`: Reports and project documentation
-- `evidence/`: Week-wise evidence, logs, and screenshots
+* `app.py`: Main application entry point
+* `camera_stream.py`: Camera input and frame handling
+* `face_detection.py`: Face detection logic
+* `face_encoding.py`: Face encoding generation
+* `face_matching.py`: Matching logic for known vs unknown faces
+* `known_faces.json`: Registered known faces metadata
+* `test_camera.py`: Camera testing utility
+* `docs/`: Reports and project documentation
+* `evidence/`: Week-wise evidence, logs, and screenshots
 
 ## Setup and Run
 
@@ -60,38 +60,17 @@ pip install -r requirements.txt
 python app.py
 ```
 
-<<<<<<< HEAD
-## Demo Images
+## Demo Image
 
-Add your screenshots in `evidence/screenshots/` and update the paths below.
+Below is a live demo of the system detecting and recognizing faces in real-time.  
+Known faces are highlighted in green with confidence scores, while unknown faces are marked in red.
 
-![Live Detection Demo](evidence/screenshots/live-detection-demo.png)
-![Known Person Recognition](evidence/screenshots/known-person-recognition.png)
-![Unknown Face Alert](evidence/screenshots/unknown-face-alert.png)
-
-## Future Improvements
-=======
-## Demo Images
-
-Add your screenshots in the `evidence/week*/screenshots/` folders and update the paths below.
-
-```markdown
-![Live Detection Demo](evidence/week5/screenshots/live-detection-demo.png)
-![Known Person Recognition](evidence/week6/screenshots/known-person-recognition.png)
-![Unknown Face Alert](evidence/week7/screenshots/unknown-face-alert.png)
-```
-
-Example section after adding real images:
-
-![Live Detection Demo](evidence/week5/screenshots/live-detection-demo.png)
-![Known Person Recognition](evidence/week6/screenshots/known-person-recognition.png)
-![Unknown Face Alert](evidence/week7/screenshots/unknown-face-alert.png)
+![Live Detection Demo](evidence/week7/screenshots/live-detection-demo.png)
 
 ## Future Improvements
 
->>>>>>> ace8618 (Cleanup: remove unnecessary comments and polish UI)
-- Multi-camera support
-- Cloud sync for known faces
-- Alert channels (email/SMS)
-- Performance optimization for low-power devices
-- Additional analytics and attendance reporting
+* Multi-camera support
+* Cloud sync for known faces
+* Alert channels (email/SMS)
+* Performance optimization for low-power devices
+* Additional analytics and attendance reporting
