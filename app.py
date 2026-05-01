@@ -40,8 +40,8 @@ def log_event(event: str, details: str = "") -> None:
 
 
 st.set_page_config(
-    page_title="Face Recognition Surveillance",
-    page_icon="CAM",
+    page_title="Face Recognition Surveillance System",
+    page_icon="🎥",
     layout="wide",
 )
 
@@ -93,184 +93,182 @@ with st.sidebar:
     st.title("Controls")
     st.markdown("---")
 
-    st.subheader("Camera")
-    cam_index = st.selectbox("Camera Index", options=[0, 1, 2], index=0, key="camera_index")
-    resolution = st.selectbox(
-        "Resolution",
-        options=["640 x 480", "1280 x 720", "1920 x 1080"],
-        index=0,
-        key="camera_resolution",
-    )
-    res_w, res_h = map(int, resolution.replace(" ", "").split("x"))
+    with st.expander("Camera", expanded=True):
+        cam_index = st.selectbox("Camera Index", options=[0, 1, 2], index=0, key="camera_index")
+        resolution = st.selectbox(
+            "Resolution",
+            options=["640 x 480", "1280 x 720", "1920 x 1080"],
+            index=0,
+            key="camera_resolution",
+        )
+        res_w, res_h = map(int, resolution.replace(" ", "").split("x"))
 
-    if not st.session_state.streaming:
-        if st.button("Start Camera", use_container_width=True, type="primary", key="start_camera_btn"):
-            start_camera(cam_index, res_w, res_h)
-            st.rerun()
-    else:
-        if st.button("Stop Camera", use_container_width=True, type="secondary", key="stop_camera_btn"):
-            stop_camera()
-            st.rerun()
+        if not st.session_state.streaming:
+            if st.button("Start Camera", use_container_width=True, type="primary", key="start_camera_btn"):
+                start_camera(cam_index, res_w, res_h)
+                st.rerun()
+        else:
+            if st.button("Stop Camera", use_container_width=True, type="secondary", key="stop_camera_btn"):
+                stop_camera()
+                st.rerun()
 
-    st.markdown("---")
+    with st.expander("Recognition", expanded=True):
+        st.session_state.tolerance = st.slider(
+            "Match tolerance",
+            min_value=0.35,
+            max_value=0.65,
+            value=float(st.session_state.tolerance),
+            step=0.01,
+            key="match_tolerance",
+            help="Lower value is stricter. 0.50 is a practical default.",
+        )
+        st.session_state.week7_confidence_threshold = st.slider(
+            "Confidence threshold",
+            min_value=0.50,
+            max_value=0.80,
+            value=float(st.session_state.week7_confidence_threshold),
+            step=0.01,
+            key="week7_conf_threshold",
+            help="Higher value reduces false matches but may increase Unknown labels.",
+        )
 
-    st.subheader("Recognition")
-    st.session_state.tolerance = st.slider(
-        "Match tolerance",
-        min_value=0.35,
-        max_value=0.65,
-        value=float(st.session_state.tolerance),
-        step=0.01,
-        key="match_tolerance",
-        help="Lower value is stricter. 0.50 is a practical default.",
-    )
+        st.session_state.week7_process_every_n = st.selectbox(
+            "Process every Nth frame",
+            options=[1, 2, 3],
+            index=[1, 2, 3].index(int(st.session_state.week7_process_every_n)),
+            key="week7_frame_skip",
+            help="Process every Nth frame to improve performance.",
+        )
 
-    st.session_state.week7_confidence_threshold = st.slider(
-        "Week 7 confidence threshold",
-        min_value=0.50,
-        max_value=0.80,
-        value=float(st.session_state.week7_confidence_threshold),
-        step=0.01,
-        key="week7_conf_threshold",
-        help="Higher value reduces wrong matches but may increase Unknown labels.",
-    )
-
-    st.session_state.week7_process_every_n = st.selectbox(
-        "Week 7 frame skip",
-        options=[1, 2, 3],
-        index=[1, 2, 3].index(int(st.session_state.week7_process_every_n)),
-        key="week7_frame_skip",
-        help="Process every Nth frame for faster live recognition.",
-    )
-
-    st.session_state.week7_resize_scale = st.selectbox(
-        "Week 7 resize scale",
-        options=[0.4, 0.5, 0.6, 0.75],
-        index=[0.4, 0.5, 0.6, 0.75].index(float(st.session_state.week7_resize_scale)),
-        key="week7_resize_scale_select",
-        help="Smaller scale improves speed; larger scale improves detail.",
-    )
-
-    st.markdown("---")
+        st.session_state.week7_resize_scale = st.selectbox(
+            "Detection resize scale",
+            options=[0.4, 0.5, 0.6, 0.75],
+            index=[0.4, 0.5, 0.6, 0.75].index(float(st.session_state.week7_resize_scale)),
+            key="week7_resize_scale_select",
+            help="Smaller scale improves speed; larger scale preserves detail.",
+        )
 
     if is_encoding_available():
-        st.subheader("Register Face")
-        uploaded = st.file_uploader(
-            "Upload photo",
-            type=["jpg", "jpeg", "png"],
-            key="upload_face_photo",
-        )
-        name_upload = st.text_input("Name (upload)", placeholder="e.g. Alice", key="name_upload")
-        if st.button("Add from photo", use_container_width=True, key="add_photo_btn"):
-            if not name_upload.strip():
-                st.warning("Enter a name first.")
-            elif uploaded is None:
-                st.warning("Upload a photo first.")
-            else:
-                suffix = pathlib.Path(uploaded.name).suffix
-                with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                    tmp.write(uploaded.read())
-                    tmp_path = tmp.name
-                ok = st.session_state.db.add_face_from_image(name_upload.strip(), tmp_path)
-                if ok:
-                    log_event("face_registered_photo", f"name={name_upload.strip()}")
+        with st.expander("Registry", expanded=False):
+            st.subheader("Register Person")
+            uploaded = st.file_uploader(
+                "Upload photo",
+                type=["jpg", "jpeg", "png"],
+                key="upload_face_photo",
+            )
+            name_upload = st.text_input("Name (upload)", placeholder="e.g. Alice", key="name_upload")
+            if st.button("Add from photo", use_container_width=True, key="add_photo_btn"):
+                if not name_upload.strip():
+                    st.warning("Enter a name first.")
+                elif uploaded is None:
+                    st.warning("Upload a photo first.")
                 else:
-                    log_event("face_register_photo_failed", f"name={name_upload.strip()}")
-                st.success(f"Added '{name_upload.strip()}'") if ok else st.error("No face found in photo.")
+                    suffix = pathlib.Path(uploaded.name).suffix
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                        tmp.write(uploaded.read())
+                        tmp_path = tmp.name
+                    ok = st.session_state.db.add_face_from_image(name_upload.strip(), tmp_path)
+                    if ok:
+                        log_event("face_registered_photo", f"name={name_upload.strip()}")
+                    else:
+                        log_event("face_register_photo_failed", f"name={name_upload.strip()}")
+                    st.success(f"Added '{name_upload.strip()}'") if ok else st.error("No face found in photo.")
 
-        st.markdown("---")
-        st.subheader("Week 6: Image Upload Module")
-        uploaded_w6 = st.file_uploader(
-            "Upload Face Image (Week 6)",
-            type=["jpg", "jpeg", "png"],
-            key="upload_face_photo_week6",
-        )
-        name_w6 = st.text_input("Enter Name (Week 6)", key="name_upload_week6")
+            st.markdown("---")
+            st.subheader("Upload Person Image")
+            uploaded_w6 = st.file_uploader(
+                "Upload face image",
+                type=["jpg", "jpeg", "png"],
+                key="upload_face_photo_week6",
+            )
+            name_w6 = st.text_input("Name", key="name_upload_week6")
 
-        if uploaded_w6 is not None:
-            file_bytes = np.asarray(bytearray(uploaded_w6.read()), dtype=np.uint8)
-            uploaded_w6.seek(0)
-            image_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-            if image_bgr is not None:
-                st.image(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB), caption="Uploaded Image", use_container_width=True)
-
-        if st.button("Register Uploaded Person", use_container_width=True, key="register_uploaded_week6"):
-            if uploaded_w6 is None:
-                st.warning("Upload an image first.")
-            elif not name_w6.strip():
-                st.warning("Enter a name first.")
-            else:
+            if uploaded_w6 is not None:
                 file_bytes = np.asarray(bytearray(uploaded_w6.read()), dtype=np.uint8)
                 uploaded_w6.seek(0)
                 image_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-                if image_bgr is None:
-                    st.error("Invalid image file. Please upload a clear JPG/PNG.")
+                if image_bgr is not None:
+                    st.image(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB), caption="Uploaded Image", use_container_width=True)
+
+            if st.button("Register Uploaded Person", use_container_width=True, key="register_uploaded_week6"):
+                if uploaded_w6 is None:
+                    st.warning("Upload an image first.")
+                elif not name_w6.strip():
+                    st.warning("Enter a name first.")
                 else:
-                    encoding = encode_face_from_image(image_bgr)
-                    if encoding is None:
-                        st.warning("Ensure image quality is good and only one clear face is visible.")
-                        st.write("- Only ONE face in image")
-                        st.write("- Face is clear and well-lit")
-                        st.write("- Image is not blurry")
-                        log_event("face_register_upload_failed", f"name={name_w6.strip()}")
+                    file_bytes = np.asarray(bytearray(uploaded_w6.read()), dtype=np.uint8)
+                    uploaded_w6.seek(0)
+                    image_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+                    if image_bgr is None:
+                        st.error("Invalid image file. Please upload a clear JPG/PNG.")
                     else:
-                        ok = save_encoding_to_db(name_w6.strip(), encoding, st.session_state.db.db_path)
-                        if ok:
-                            st.session_state.db.reload()
-                            log_event("face_registered_upload", f"name={name_w6.strip()}")
-                            st.success(f"{name_w6.strip()} registered successfully from uploaded image.")
+                        encoding = encode_face_from_image(image_bgr)
+                        if encoding is None:
+                            st.warning("Ensure image quality is good and only one clear face is visible.")
+                            st.write("- Only ONE face in image")
+                            st.write("- Face is clear and well-lit")
+                            st.write("- Image is not blurry")
+                            log_event("face_register_upload_failed", f"name={name_w6.strip()}")
                         else:
-                            st.error("Failed to store uploaded face in database.")
+                            ok = save_encoding_to_db(name_w6.strip(), encoding, st.session_state.db.db_path)
+                            if ok:
+                                st.session_state.db.reload()
+                                log_event("face_registered_upload", f"name={name_w6.strip()}")
+                                st.success(f"{name_w6.strip()} registered successfully from uploaded image.")
+                            else:
+                                st.error("Failed to store uploaded face in database.")
 
-        st.markdown("---")
+            st.markdown("---")
 
-        name_live = st.text_input("Name (webcam)", placeholder="e.g. Bob", key="name_webcam")
-        if st.button(
-            "Capture from webcam",
-            use_container_width=True,
-            disabled=not st.session_state.streaming,
-            key="capture_webcam_btn",
-        ):
-            if not name_live.strip():
-                st.warning("Enter a name first.")
-            else:
-                st.session_state.capture_pending = True
-                st.session_state.capture_name = name_live.strip()
-                log_event("face_capture_requested", f"name={name_live.strip()}")
-
-        if st.session_state.last_snap is not None:
-            st.image(
-                cv2.cvtColor(st.session_state.last_snap, cv2.COLOR_BGR2RGB),
-                caption="Last captured frame",
+            name_live = st.text_input("Name (webcam)", placeholder="e.g. Bob", key="name_webcam")
+            if st.button(
+                "Capture from webcam",
                 use_container_width=True,
-            )
+                disabled=not st.session_state.streaming,
+                key="capture_webcam_btn",
+            ):
+                if not name_live.strip():
+                    st.warning("Enter a name first.")
+                else:
+                    st.session_state.capture_pending = True
+                    st.session_state.capture_name = name_live.strip()
+                    log_event("face_capture_requested", f"name={name_live.strip()}")
 
-        st.markdown("---")
+            if st.session_state.last_snap is not None:
+                st.image(
+                    cv2.cvtColor(st.session_state.last_snap, cv2.COLOR_BGR2RGB),
+                    caption="Last captured frame",
+                    use_container_width=True,
+                )
 
-        st.subheader("Known Faces")
-        names = st.session_state.db.get_names()
-        if names:
-            for n in names:
-                c1, c2 = st.columns([3, 1])
-                c1.write(f"{n}")
-                if c2.button("Remove", key=f"rm_{n}"):
-                    st.session_state.db.remove_face(n)
-                    log_event("face_removed", f"name={n}")
-                    st.rerun()
-        else:
-            st.caption("No faces registered yet.")
+            st.markdown("---")
 
-        st.markdown("---")
-        st.subheader("Database Records")
-        records = st.session_state.db.get_all_records()
-        if records:
-            for r in records:
-                st.write(f"ID: {r[0]} | Name: {r[1]}")
-        else:
-            st.caption("No records in SQLite table yet.")
+            st.subheader("Known Faces")
+            names = st.session_state.db.get_names()
+            if names:
+                for n in names:
+                    c1, c2 = st.columns([3, 1])
+                    c1.write(f"{n}")
+                    if c2.button("Remove", key=f"rm_{n}"):
+                        st.session_state.db.remove_face(n)
+                        log_event("face_removed", f"name={n}")
+                        st.rerun()
+            else:
+                st.caption("No faces registered yet.")
+
+            st.markdown("---")
+            st.subheader("Database Records")
+            records = st.session_state.db.get_all_records()
+            if records:
+                for r in records:
+                    st.write(f"ID: {r[0]} | Name: {r[1]}")
+            else:
+                st.caption("No records in SQLite table yet.")
 
 st.title("Real-Time Face Recognition Surveillance System")
-st.markdown("Week 1-7 flow: camera/upload -> detection -> encoding -> live SQLite matching")
+st.write(
+    "Offline real-time face recognition dashboard — detection, encoding, matching, and audit logging."
+)
 st.markdown("---")
 
 if not st.session_state.streaming:
@@ -293,7 +291,7 @@ else:
     known_ph = c4.empty()
     uptime_ph = c5.empty()
 
-    st.markdown("#### Recently Recognized")
+    st.markdown("### Recent Recognitions")
     last_seen_ph = st.empty()
 
     video_ph = st.empty()
@@ -302,7 +300,7 @@ else:
     stream_start = time.time()
 
     known_names, known_encodings = load_known_faces(st.session_state.db)
-    st.caption(f"Week 7 loaded known faces: {len(known_names)}")
+    st.caption(f"Known faces loaded: {len(known_names)}")
 
     while st.session_state.streaming:
         frame = cam.read()

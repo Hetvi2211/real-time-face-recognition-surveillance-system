@@ -10,22 +10,16 @@ from face_detection import (
     is_face_detection_available,
 )
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Page config  (must be first Streamlit call)
-# ──────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Face Recognition Surveillance",
     page_icon="🎥",
     layout="wide",
 )
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Session-state helpers
-# ──────────────────────────────────────────────────────────────────────────────
 if "cam" not in st.session_state:
-    st.session_state.cam = None          # CameraStream instance
+    st.session_state.cam = None
 if "streaming" not in st.session_state:
-    st.session_state.streaming = False   # True when camera is running
+    st.session_state.streaming = False
 
 
 def start_camera(src: int, width: int, height: int) -> None:
@@ -46,9 +40,6 @@ def stop_camera() -> None:
         st.session_state.streaming = False
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Sidebar — controls
-# ──────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.image(
         "https://img.icons8.com/emoji/96/video-camera-emoji.png",
@@ -73,7 +64,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Start / Stop button
     if not st.session_state.streaming:
         if st.button("▶  Start Camera", use_container_width=True, type="primary"):
             start_camera(cam_index, res_w, res_h)
@@ -84,22 +74,15 @@ with st.sidebar:
             st.rerun()
 
     st.markdown("---")
-    st.caption("Week 2 — Camera Streaming Module")
+    st.caption("Camera streaming module")
     st.caption("Real-Time Face Recognition System")
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Main area — header
-# ──────────────────────────────────────────────────────────────────────────────
 st.title("🎥 Real-Time Face Recognition Surveillance System")
-st.markdown("**Week 3 Deliverable** - Live camera feed with face detection")
+st.markdown("Live camera feed with face detection")
 st.markdown("---")
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Main area — video feed
-# ──────────────────────────────────────────────────────────────────────────────
 if not st.session_state.streaming:
-    # Placeholder when camera is off
     st.info("Camera is stopped. Click **▶ Start Camera** in the sidebar to begin streaming.")
 
     col1, col2, col3 = st.columns(3)
@@ -118,17 +101,14 @@ else:
     if not detection_available and detection_error:
         st.warning(detection_error)
 
-    # Stats row
     col1, col2, col3, col4 = st.columns(4)
     fps_placeholder = col1.empty()
     res_placeholder = col2.empty()
     faces_placeholder = col3.empty()
     status_placeholder = col4.empty()
 
-    # Live video placeholder
     video_placeholder = st.empty()
 
-    # ── Streaming loop ──────────────────────────────────────────────────────
     frame_count = 0
     stream_start = time.time()
 
@@ -148,7 +128,6 @@ else:
         else:
             face_locations = []
 
-        # Overlay FPS + resolution on the frame
         w, h  = cam.get_resolution()
         fps   = cam.get_fps()
         face_count = len(face_locations)
@@ -158,13 +137,10 @@ else:
             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2,
         )
 
-        # Convert BGR → RGB for Streamlit
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Push frame to the UI
         video_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
 
-        # Update stats every 15 frames
         if frame_count % 15 == 0:
             fps_placeholder.metric("FPS", fps)
             res_placeholder.metric("Resolution", f"{w} × {h}")
@@ -172,5 +148,4 @@ else:
             elapsed = int(time.time() - stream_start)
             status_placeholder.metric("Uptime", f"{elapsed}s")
 
-        # Small sleep to avoid pegging the CPU
         time.sleep(0.03)
