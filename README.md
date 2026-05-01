@@ -60,21 +60,12 @@ pip install -r requirements.txt
 python app.py
 ```
 
-## Demo Images
+## Demo Image
 
-Add your screenshots in the `evidence/week*/screenshots/` folders and update the paths below.
+Below is a live demo of the system detecting and recognizing faces in real-time.  
+Known faces are highlighted in green with confidence scores, while unknown faces are marked in red.
 
-```markdown
-![Live Detection Demo](evidence/week5/screenshots/live-detection-demo.png)
-![Known Person Recognition](evidence/week6/screenshots/known-person-recognition.png)
-![Unknown Face Alert](evidence/week7/screenshots/unknown-face-alert.png)
-```
-
-Example section after adding real images:
-
-![Live Detection Demo](evidence/week5/screenshots/live-detection-demo.png)
-![Known Person Recognition](evidence/week6/screenshots/known-person-recognition.png)
-![Unknown Face Alert](evidence/week7/screenshots/unknown-face-alert.png)
+![Live Detection Demo](evidence/week7/screenshots/live-detection-demo.png)
 
 ## Future Improvements
 
