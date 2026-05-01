@@ -25,7 +25,7 @@ logging.basicConfig(
     format="%(asctime)s - %(message)s",
 )
 
-EVIDENCE_LOG_PATH = pathlib.Path("evidence/runtime_logs/app_events.log")
+EVIDENCE_LOG_PATH = pathlib.Path("runtime_logs/app_events.log")
 
 
 def log_event(event: str, details: str = "") -> None:
@@ -56,9 +56,9 @@ DEFAULTS = {
     "last_snap": None,
     "last_logged_seen": {},
     "last_results": [],
-    "week7_process_every_n": 2,
-    "week7_resize_scale": 0.5,
-    "week7_confidence_threshold": 0.60,
+    "process_every_n": 2,
+    "resize_scale": 0.5,
+    "confidence_threshold": 0.60,
 }
 for k, v in DEFAULTS.items():
     if k not in st.session_state:
@@ -113,38 +113,40 @@ with st.sidebar:
                 st.rerun()
 
     with st.expander("Recognition", expanded=True):
-        st.session_state.tolerance = st.slider(
+        # Use widgets that bind to session_state keys directly (don't assign into session_state)
+        tolerance = st.slider(
             "Match tolerance",
             min_value=0.35,
             max_value=0.65,
             value=float(st.session_state.tolerance),
             step=0.01,
-            key="match_tolerance",
+            key="tolerance",
             help="Lower value is stricter. 0.50 is a practical default.",
         )
-        st.session_state.week7_confidence_threshold = st.slider(
+
+        confidence_threshold = st.slider(
             "Confidence threshold",
             min_value=0.50,
             max_value=0.80,
-            value=float(st.session_state.week7_confidence_threshold),
+            value=float(st.session_state.confidence_threshold),
             step=0.01,
-            key="week7_conf_threshold",
+            key="confidence_threshold",
             help="Higher value reduces false matches but may increase Unknown labels.",
         )
 
-        st.session_state.week7_process_every_n = st.selectbox(
+        process_every_n = st.selectbox(
             "Process every Nth frame",
             options=[1, 2, 3],
-            index=[1, 2, 3].index(int(st.session_state.week7_process_every_n)),
-            key="week7_frame_skip",
+            index=[1, 2, 3].index(int(st.session_state.process_every_n)),
+            key="process_every_n",
             help="Process every Nth frame to improve performance.",
         )
 
-        st.session_state.week7_resize_scale = st.selectbox(
+        resize_scale = st.selectbox(
             "Detection resize scale",
             options=[0.4, 0.5, 0.6, 0.75],
-            index=[0.4, 0.5, 0.6, 0.75].index(float(st.session_state.week7_resize_scale)),
-            key="week7_resize_scale_select",
+            index=[0.4, 0.5, 0.6, 0.75].index(float(st.session_state.resize_scale)),
+            key="resize_scale",
             help="Smaller scale improves speed; larger scale preserves detail.",
         )
 
@@ -176,28 +178,28 @@ with st.sidebar:
 
             st.markdown("---")
             st.subheader("Upload Person Image")
-            uploaded_w6 = st.file_uploader(
+            uploaded_local = st.file_uploader(
                 "Upload face image",
                 type=["jpg", "jpeg", "png"],
-                key="upload_face_photo_week6",
+                key="upload_face_photo_local",
             )
-            name_w6 = st.text_input("Name", key="name_upload_week6")
+            name_upload_local = st.text_input("Name", key="name_upload_local")
 
-            if uploaded_w6 is not None:
-                file_bytes = np.asarray(bytearray(uploaded_w6.read()), dtype=np.uint8)
-                uploaded_w6.seek(0)
+            if uploaded_local is not None:
+                file_bytes = np.asarray(bytearray(uploaded_local.read()), dtype=np.uint8)
+                uploaded_local.seek(0)
                 image_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
                 if image_bgr is not None:
                     st.image(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB), caption="Uploaded Image", use_container_width=True)
 
-            if st.button("Register Uploaded Person", use_container_width=True, key="register_uploaded_week6"):
-                if uploaded_w6 is None:
+            if st.button("Register Uploaded Person", use_container_width=True, key="register_uploaded_local"):
+                if uploaded_local is None:
                     st.warning("Upload an image first.")
-                elif not name_w6.strip():
+                elif not name_upload_local.strip():
                     st.warning("Enter a name first.")
                 else:
-                    file_bytes = np.asarray(bytearray(uploaded_w6.read()), dtype=np.uint8)
-                    uploaded_w6.seek(0)
+                    file_bytes = np.asarray(bytearray(uploaded_local.read()), dtype=np.uint8)
+                    uploaded_local.seek(0)
                     image_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
                     if image_bgr is None:
                         st.error("Invalid image file. Please upload a clear JPG/PNG.")
@@ -327,19 +329,19 @@ else:
                 st.session_state.capture_name = ""
                 st.rerun()
 
-            should_process = frame_count % int(st.session_state.week7_process_every_n) == 0
+            should_process = frame_count % int(st.session_state.process_every_n) == 0
 
             if should_process:
                 results = recognise_frame(
                     frame,
                     st.session_state.db,
                     tolerance=st.session_state.tolerance,
-                    resize_scale=float(st.session_state.week7_resize_scale),
+                    resize_scale=float(st.session_state.resize_scale),
                 )
 
                 filtered_results: list[MatchResult] = []
                 for r in results:
-                    if r.is_known and r.confidence < float(st.session_state.week7_confidence_threshold):
+                    if r.is_known and r.confidence < float(st.session_state.confidence_threshold):
                         filtered_results.append(
                             MatchResult(name="Unknown", confidence=r.confidence, location=r.location)
                         )

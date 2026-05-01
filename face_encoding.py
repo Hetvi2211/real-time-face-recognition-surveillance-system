@@ -75,7 +75,7 @@ def encode_face_from_image(image_bgr: np.ndarray) -> Optional[np.ndarray]:
     """
     Return a single face encoding from an uploaded image.
 
-    Rules for Week 6 quality gate:
+    Quality gate rules:
     - Exactly one face must be present.
     - Image must not be too blurry.
     """
@@ -104,7 +104,7 @@ def encode_face_from_image(image_bgr: np.ndarray) -> Optional[np.ndarray]:
 
 
 def save_encoding_to_db(name: str, encoding: np.ndarray, db_path: str | Path = DEFAULT_DB_PATH) -> bool:
-    """Insert one encoding row directly into SQLite for Week 6 image uploads."""
+    """Insert one encoding row directly into SQLite for uploaded image registrations."""
     if encoding is None:
         return False
 

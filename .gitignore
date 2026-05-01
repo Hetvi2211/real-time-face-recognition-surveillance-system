@@ -12,10 +12,5 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
-<<<<<<< HEAD
-
-
 known_faces.db
-evidence/runtime_logs/
-=======
->>>>>>> fec7549fe0da8f462813dbab6cca18206dcb620d
+runtime_logs/

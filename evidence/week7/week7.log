@@ -1,6 +1,0 @@
-Step 1: Start Streamlit app and camera.
-Step 2: Verify known person appears with name + confidence.
-Step 3: Verify unknown person appears as Unknown.
-Step 4: Increase frame skip or reduce resize scale to improve speed.
-Step 5: Tune confidence threshold to reduce wrong matches.
-Step 6: Confirm runtime log includes known_face_detected and unknown_face_detected entries.

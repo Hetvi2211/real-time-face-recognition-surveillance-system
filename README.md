@@ -29,15 +29,13 @@ If a match is found, the system displays the person's name. If no match is found
 
 ## Project Structure
 
-* `app.py`: Main application entry point
-* `camera_stream.py`: Camera input and frame handling
-* `face_detection.py`: Face detection logic
-* `face_encoding.py`: Face encoding generation
-* `face_matching.py`: Matching logic for known vs unknown faces
-* `known_faces.json`: Registered known faces metadata
-* `test_camera.py`: Camera testing utility
-* `docs/`: Reports and project documentation
-* `evidence/`: Week-wise evidence, logs, and screenshots
+- `app.py`: Main application entry point
+- `camera_stream.py`: Camera input and frame handling
+- `face_detection.py`: Face detection logic
+- `face_encoding.py`: Face encoding generation
+- `face_matching.py`: Matching logic for known vs unknown faces
+- `known_faces.json`: Registered known faces metadata
+- `test_camera.py`: Camera testing utility
 
 ## Setup and Run
 
@@ -60,17 +58,16 @@ pip install -r requirements.txt
 python app.py
 ```
 
-## Demo Image
+## Demo Images
 
-Below is a live demo of the system detecting and recognizing faces in real-time.  
-Known faces are highlighted in green with confidence scores, while unknown faces are marked in red.
+Add your screenshots in `screenshots/` and update the paths below. Example placeholders are included.
 
-![Live Detection Demo](evidence/week7/screenshots/live-detection-demo.png)
+![Live Detection Demo](screenshots/live-detection-demo.png)
 
 ## Future Improvements
 
-* Multi-camera support
-* Cloud sync for known faces
-* Alert channels (email/SMS)
-* Performance optimization for low-power devices
-* Additional analytics and attendance reporting
+- Multi-camera support
+- Cloud sync for known faces
+- Alert channels (email/SMS)
+- Performance optimization for low-power devices
+- Additional analytics and attendance reporting
