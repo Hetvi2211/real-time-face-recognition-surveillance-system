@@ -1,0 +1,18 @@
+# Real-Time Face Recognition Surveillance System
+# Install all dependencies:
+#   pip install -r requirements.txt
+
+# ── Week 1 & 2 ──────────────────────────────────────────────────────────────
+opencv-python>=4.8.0      # Camera capture + image processing
+streamlit>=1.32.0         # Web UI
+
+# ── Week 3+ (face recognition) ──────────────────────────────────────────────
+face_recognition          # Face detection / face encoding
+dlib                      # Required by face_recognition
+setuptools<81            # face_recognition_models still depends on pkg_resources
+
+# ── Database (built-in, no install needed) ──────────────────────────────────
+# sqlite3                  # Python built-in
+
+# ── Week 4+ (encoding persistence / DB ops) ─────────────────────────────────
+numpy>=1.24.0             # Array math for encoding vectors (usually already installed)
